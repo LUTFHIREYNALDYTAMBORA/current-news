@@ -1,33 +1,5 @@
 "use client";
 
-// import Image from "next/image";
-// import styles from "./page.module.css";
-// import { TextField } from "@mui/material";
-// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-// import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-// import dayjs from 'dayjs';
-
-// export default function Home() {
-//   return (
-//     <main className={styles.main}>
-//       <div>
-//         <TextField size="small" label="Writer" />
-//         <TextField size="small" label="Editor" />
-//         <TextField size="small" label="Title" />
-//         <LocalizationProvider dateAdapter={AdapterDayjs}>
-//           <DatePicker
-//             label="Pilih Tanggal"
-//           />
-//         </LocalizationProvider>
-//       </div>
-//     </main>
-//   );
-// }
-
-
-// components/NewsForm.js
-
 import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import styles from "./page.module.css";
@@ -42,12 +14,13 @@ import {
   Card,
   IconButton,
   Modal,
+  Grid,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import StartFirebase from '@/utlis/configFirebase';
-import { Close, Delete, Edit } from '@mui/icons-material';
+import { Check, Close, Delete, Edit } from '@mui/icons-material';
 import Image from 'next/image';
 import IMG_1 from '../assets/demo1.jpg';
 
@@ -57,6 +30,7 @@ export default function NewsForm() {
   const [listImages, _] = useState([{ src: IMG_1, name: 'demo1' }]);
   const [listNews, setListNews] = useState([]);
   const [type, setType] = useState('add');
+  const [active, setActive] = useState(null);
   const [showImg, setShowImg] = useState(false);
   const [formData, setFormData] = useState({
     writer: '',
@@ -73,7 +47,9 @@ export default function NewsForm() {
       const dataFromFirebase = snapshot.val();
       if (dataFromFirebase && dataFromFirebase.data) {
         setListNews(Object.values(dataFromFirebase?.data));
+        setActive(dataFromFirebase.isActive)
       } else {
+        setActive(null);
         setListNews([]);
       }
     });
@@ -119,6 +95,11 @@ export default function NewsForm() {
     setShowImg(false);
   }
 
+  const handleSwitchContent = (index) => () => {
+    set(ref(db, 'isActive' ), index);
+  }
+
+
   return (
     <main className={styles.main}>
       <Modal
@@ -127,14 +108,7 @@ export default function NewsForm() {
         aria-labelledby="image-upload-modal-title"
         aria-describedby="image-upload-modal-description"
       >
-        <Card sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 400,
-          p: 4,
-        }}>
+        <Card className={styles.wrappCardListImg}>
           {listImages.map((img, index) => {
             return (
               <Card
@@ -148,7 +122,7 @@ export default function NewsForm() {
           })}
         </Card>
       </Modal>
-      <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+      <Paper elevation={3} sx={{ p: 4, width: '100%', height: 'fit-content' }}>
         <Typography variant="h4" gutterBottom align="center">
           Formulir Pembuatan Berita 📰
         </Typography>
@@ -162,11 +136,10 @@ export default function NewsForm() {
             gap: 3
           }}
         >
-          {/* Input: Writer & Editor (menggunakan Stack untuk layout horizontal) */}
           <Stack direction="row" spacing={2}>
             <TextField
               fullWidth
-              label="Penulis (Writer)"
+              label="Penulis"
               name="writer"
               value={formData.writer}
               onChange={handleChange}
@@ -184,19 +157,17 @@ export default function NewsForm() {
             />
           </Stack>
 
-          {/* Input: Date */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DateTimePicker
-              label="Tanggal Publikasi"
+              label="Tanggal Publikasi *"
               value={formData.date ? dayjs(formData.date, 'DD-MM-YYYY HH:mm') : null}
               onChange={handleDateChange}
               slotProps={{ textField: { size: 'small' } }}
             />
           </LocalizationProvider>
 
-          {/* Input: Title */}
           <TextField
-            label="Judul Berita (Title)"
+            label="Judul Berita"
             name="title"
             value={formData.title}
             onChange={handleChange}
@@ -204,7 +175,6 @@ export default function NewsForm() {
             required
           />
 
-          {/* Input: File Upload */}
           <Box>
             <Button
               fullWidth
@@ -242,14 +212,13 @@ export default function NewsForm() {
             )}
           </Box>
 
-          {/* Input: Content */}
           <TextField
-            label="Isi Berita (Content)"
+            label="Isi Berita"
             name="content"
             value={formData.content}
             onChange={handleChange}
             multiline
-            rows={10}
+            rows={8}
             required
           />
 
@@ -268,22 +237,52 @@ export default function NewsForm() {
         {listNews.length > 0 &&
           listNews.map((news, index) => {
             return (
-              <Card key={index} className={styles.wrappCard}>
-                <div style={{ display: 'flex' }}>
-                  <div style={{ marginRight: '20px' }}>
-                    <div>Penulis : <span className={styles.valueList}>{news.writer}</span></div>
-                    <div>Editor : <span className={styles.valueList}>{news.editor}</span></div>
+              <div key={index} style={{ position: 'relative' }} onClick={handleSwitchContent(index)}>
+                {active === index && (
+                  <div style={{
+                    backgroundColor: '#FFF',
+                    padding: '2px',
+                    width: 'fit-content',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'absolute',
+                    top: '-5px',
+                    left: '-10px',
+                    zIndex: 1,
+                    boxShadow: '0px 2px 4px rgba(0,0,0,0.2)'
+                  }}>
+                    <Check color='success' />
                   </div>
-                  <div>
-                    <div>Tanggal : <span className={styles.valueList}>{news.date}</span></div>
-                    <div>Judul : <span className={styles.valueList}>{news.title}</span></div>
-                  </div>
-                </div>
-                <div>
-                  <IconButton><Edit /></IconButton>
-                  <IconButton><Delete /></IconButton>
-                </div>
-              </Card>
+                )}
+                <Card className={active === index ? styles.activeCard : styles.wrappCard}>
+                  <Grid container spacing={2}>
+                    <Grid item size={2}>
+                      <div>Penulis</div>
+                      <div>Editor</div>
+                      <div>Tanggal</div>
+                      <div>Judul</div>
+                    </Grid>
+                    <Grid item size={1}>
+                      <div>:</div>
+                      <div>:</div>
+                      <div>:</div>
+                      <div>:</div>
+                    </Grid>
+                    <Grid item size={7}>
+                      <div className={styles.valueList}>{news.writer}</div>
+                      <div className={styles.valueList}>{news.editor}</div>
+                      <div className={styles.valueList}>{news.date}</div>
+                      <div className={styles.valueList}>{news.title}</div>
+                    </Grid>
+                    <Grid item size={2}>
+                      <IconButton><Edit /></IconButton>
+                      <IconButton><Delete /></IconButton>
+                    </Grid>
+                  </Grid>
+                </Card>
+              </div>
             )
           })}
       </div>
